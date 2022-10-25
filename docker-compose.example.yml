@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  update-ip-name-com:
+    image: update-ip-name-com
+    environment:
+      UPDATE_INTERVAL_HOURS: 12
+      NAME_COM_USERNAME: username
+      PROD_TOKEN: <token>
+      DOMAIN_NAMES: domain1.com domain2.com
