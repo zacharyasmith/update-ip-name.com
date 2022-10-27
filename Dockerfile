@@ -1,4 +1,4 @@
-## -*- dockerfile-image-name: "update-ip-name-com" -*-
+## -*- dockerfile-image-name: "localhost:5000/update-ip-name-com" -*-
 
 FROM python:3.8-alpine
 

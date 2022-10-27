@@ -8,6 +8,7 @@ import base64
 from pprint import pprint
 import json
 import time
+import sys
 
 INTERVAL = int(os.getenv("UPDATE_INTERVAL_HOURS", "12"))
 
@@ -117,4 +118,5 @@ def update_dns_A_record(domain, dry_run=False):
 while True:
     for domain in DOMAIN_NAMES:
         update_dns_A_record(domain)
+    sys.stdout.flush()
     time.sleep(INTERVAL * 60 * 60)
