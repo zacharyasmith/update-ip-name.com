@@ -8,12 +8,12 @@ their auto-updating.
 
 To run, set the following environment variables.
 
-| Name                    | Required | Description                 | Default |
-|-------------------------|----------|-----------------------------|---------|
-| `UPDATE_INTERVAL_HOURS` | N        | Wait time before updating.  | 12      |
-| `NAME_COM_USERNAME`     | Y        | Username at name.com        | -       |
-| `PROD_TOKEN`            | Y        | Token supplied by name.com  | -       |
-| `DOMAIN_NAMES`          | Y        | Space separated (no `www.`) | -       |
+| Name                      | Required | Description                 | Default |
+|---------------------------|----------|-----------------------------|---------|
+| `UPDATE_INTERVAL_MINUTES` | N        | Wait time before updating.  | 15      |
+| `NAME_COM_USERNAME`       | Y        | Username at name.com        | -       |
+| `PROD_TOKEN`              | Y        | Token supplied by name.com  | -       |
+| `DOMAIN_NAMES`            | Y        | Space separated (no `www.`) | -       |
 
 Get your token at `https://www.name.com/account/settings/api`
 
