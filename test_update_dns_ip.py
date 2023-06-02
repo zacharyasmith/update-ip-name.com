@@ -19,7 +19,7 @@ def test_get_conf():
     print(mod.get_conf("PROD_TOKEN"))
 
 
-def skip_test_request_api():
+def test_request_api():
     for domain in mod.DOMAIN_NAMES:
         print(f"{domain:-^30}")
         result = mod.request_api(f"/v4/domains/{domain}/records")
@@ -28,4 +28,4 @@ def skip_test_request_api():
 
 def test_update_A_rec():
     for domain in mod.DOMAIN_NAMES:
-        mod.update_dns_A_record(domain, dry_run=False)
+        mod.update_dns_A_record(domain, dry_run=True)

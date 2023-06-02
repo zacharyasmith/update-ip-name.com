@@ -10,7 +10,7 @@ import json
 import time
 import sys
 
-INTERVAL = int(os.getenv("UPDATE_INTERVAL_HOURS", "12"))
+INTERVAL_MINUTES = int(os.getenv("UPDATE_INTERVAL_MINUTES", "15"))
 
 NAME_COM_DEV_API = "https://api.dev.name.com"
 NAME_COM_API = "https://api.name.com"
@@ -115,8 +115,12 @@ def update_dns_A_record(domain, dry_run=False):
             pprint(update_record)
 
 
-while True:
-    for domain in DOMAIN_NAMES:
-        update_dns_A_record(domain)
-    sys.stdout.flush()
-    time.sleep(INTERVAL * 60 * 60)
+if __name__ == "__main__":
+    while True:
+        try:
+            for domain in DOMAIN_NAMES:
+                update_dns_A_record(domain)
+        except Exception as e:
+            print(e)
+        sys.stdout.flush()
+        time.sleep(INTERVAL_MINUTES * 60)
