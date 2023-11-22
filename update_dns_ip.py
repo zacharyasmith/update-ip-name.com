@@ -4,7 +4,6 @@ import urllib.request
 import os
 from pathlib import Path
 import configparser
-import base64
 from pprint import pprint
 import json
 import time
@@ -12,8 +11,8 @@ import sys
 
 INTERVAL_MINUTES = int(os.getenv("UPDATE_INTERVAL_MINUTES", "15"))
 
-NAME_COM_DEV_API = "https://api.dev.name.com"
-NAME_COM_API = "https://api.name.com"
+BASE_DEV_API = "https://api.cloudflare.com/client"
+BASE_API = "https://api.cloudflare.com/client"
 
 conf_file_instance = None
 
@@ -32,9 +31,8 @@ def get_conf(key):
         return conf_file_instance.get('secrets', key, fallback=None)
 
 
-NAME_COM_USER = os.getenv("NAME_COM_USERNAME", get_conf("NAME_COM_USERNAME"))
-TEST_ENV_API = os.getenv("TEST_TOKEN", get_conf("TEST_TOKEN"))
-PROD_ENV_API = os.getenv("PROD_TOKEN", get_conf("PROD_TOKEN"))
+TOKEN = os.getenv("TOKEN", get_conf("TOKEN"))
+ZONE_IDS = os.getenv("ZONE_IDS", get_conf("ZONE_IDS"))
 
 
 def get_ip_address():
@@ -45,17 +43,13 @@ def get_ip_address():
 
 def request_api(path, development=False, method="GET", data=None):
     """Return result of request."""
-    base = NAME_COM_API if not development else NAME_COM_DEV_API
-    password = PROD_ENV_API if not development else TEST_ENV_API
+    base = BASE_API if not development else BASE_DEV_API
     if data:
         data = data.encode("utf-8")
     print(f"{method} {path} -- {data}")
     req = urllib.request.Request(f"{base}{path}", method=method, data=data)
-    base64string = base64.b64encode(
-        bytes(f"{NAME_COM_USER}:{password}", 'ascii'))
-    req.add_header("Authorization", f"Basic {base64string.decode('utf-8')}")
-    if method in ("POST", "PUT"):
-        req.add_header("Content-Type", "application/json")
+    req.add_header("Authorization", f"Bearer {TOKEN}")
+    req.add_header("Content-Type", "application/json")
     try:
         with urllib.request.urlopen(req) as f:
             return f.read().decode(encoding='utf-8', errors='ignore')
@@ -66,34 +60,35 @@ def request_api(path, development=False, method="GET", data=None):
         raise RuntimeError(msg) from e
 
 
-DOMAIN_NAMES = os.getenv("DOMAIN_NAMES", get_conf("DOMAIN_NAMES"))
-if DOMAIN_NAMES is not None:
-    DOMAIN_NAMES = [n.strip() for n in DOMAIN_NAMES.split()]
+ZONES = []
+if ZONE_IDS is not None:
+    ZONE_IDS = [n.strip() for n in ZONE_IDS.split()]
     print("Will update domains:")
-    for name in DOMAIN_NAMES:
-        print("  ", name)
+    for zone_id in ZONE_IDS:
+        ZONES.append(zone_id.split(","))
+        print("  ", zone_id)
 else:
-    raise RuntimeError("DOMAIN_NAMES need to be set.")
+    raise RuntimeError("ZONE_IDS need to be set.")
 
 
-def update_dns_A_record(domain, dry_run=False):
+def update_dns_A_record(zone, dry_run=False):
     """Update DNS A record."""
-    result = json.loads(request_api(f"/v4/domains/{domain}/records"))
+    zone_id, domain = zone
+    result = json.loads(request_api(f"/v4/zones/{zone_id}/dns_records"))
     a_rec = None
-    for record in result['records']:
-        if record['type'] == "A":
+    for record in result['result']:
+        if record['type'] == "A" and record['name'] == domain:
             a_rec = record
             break
     if a_rec is None:
         # need to create new entry
         new_record = {
-            "host": "@",
+            "name": domain,
             "type": "A",
-            "answer": get_ip_address(),
-            "ttl": 300
+            "content": get_ip_address()
         }
         if not dry_run:
-            request_api(f"/v4/domains/{domain}/records",
+            request_api(f"/v4/zones/{zone_id}/dns_records",
                         method="POST",
                         data=json.dumps(new_record))
             return True
@@ -102,13 +97,14 @@ def update_dns_A_record(domain, dry_run=False):
     else:
         # update the record
         ip_address = get_ip_address()
-        if ip_address == a_rec["answer"]:
+        if ip_address == a_rec["content"]:
             return True
-        update_record = {"type": "A", "answer": ip_address}
+        update_record = {"type": "A", "content": ip_address, "name": domain}
         if not dry_run:
-            result = request_api(f"/v4/domains/{domain}/records/{a_rec['id']}",
-                                 method="PUT",
-                                 data=json.dumps(update_record))
+            result = request_api(
+                f"/v4/zones/{zone_id}/dns_records/{a_rec['id']}",
+                method="PATCH",
+                data=json.dumps(update_record))
             return result
         else:
             print(f"id -> {a_rec['id']}")
@@ -118,8 +114,8 @@ def update_dns_A_record(domain, dry_run=False):
 if __name__ == "__main__":
     while True:
         try:
-            for domain in DOMAIN_NAMES:
-                update_dns_A_record(domain)
+            for zone in ZONES:
+                update_dns_A_record(zone)
         except Exception as e:
             print(e)
         sys.stdout.flush()
